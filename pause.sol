@@ -110,7 +110,7 @@ contract DSPause is DSAuthPause, DSNotePause {
 
     // --- init ---
 
-    constructor(uint delay_, address owner_, DSAuthority authority_) public {
+    constructor(uint delay_, address owner_, DSAuthorityPause authority_) public {
         delay = delay_;
         owner = owner_;
         authority = authority_;
