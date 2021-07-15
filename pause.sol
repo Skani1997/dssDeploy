@@ -43,7 +43,7 @@ contract DSAuthEventsPause {
 }
 
 contract DSAuthPause is DSAuthEventsPause {
-    DSAuthority  public  authority;
+    DSAuthorityPause  public  authority;
     address      public  owner;
 
     constructor() public {
