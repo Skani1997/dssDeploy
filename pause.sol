@@ -1,7 +1,7 @@
 /**
  *Submitted for verification at Etherscan.io on 2019-11-14
 */
-pragma solidity >=0.4.23;
+pragma solidity >=0.5.12;
 
 contract DSNotePause {
     event LogNote(
