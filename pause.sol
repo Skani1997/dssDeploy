@@ -59,7 +59,7 @@ contract DSAuthPause is DSAuthEventsPause {
         emit LogSetOwner(owner);
     }
 
-    function setAuthority(DSAuthority authority_)
+    function setAuthority(DSAuthorityPause authority_)
         public
         auth
     {
@@ -77,7 +77,7 @@ contract DSAuthPause is DSAuthEventsPause {
             return true;
         } else if (src == owner) {
             return true;
-        } else if (authority == DSAuthority(address(0))) {
+        } else if (authority == DSAuthorityPause(address(0))) {
             return false;
         } else {
             return authority.canCall(src, address(this), sig);
