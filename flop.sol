@@ -5,35 +5,6 @@
 // hevm: flattened sources of /nix/store/8xb41r4qd0cjb63wcrxf1qmfg88p0961-dss-6fd7de0/src/flop.sol
 pragma solidity >=0.5.12;
 
-contract LibNoteFlop {
-    event LogNote(
-        bytes4   indexed  sig,
-        address  indexed  usr,
-        bytes32  indexed  arg1,
-        bytes32  indexed  arg2,
-        bytes             data
-    ) anonymous;
-
-    modifier note {
-        _;
-        assembly {
-            // log an 'anonymous' event with a constant 6 words of calldata
-            // and four indexed topics: selector, caller, arg1 and arg2
-            let mark := msize()                         // end of memory ensures zero
-            mstore(0x40, add(mark, 288))              // update free memory pointer
-            mstore(mark, 0x20)                        // bytes type data offset
-            mstore(add(mark, 0x20), 224)              // bytes size (padded)
-            calldatacopy(add(mark, 0x40), 0, 224)     // bytes payload
-            log4(mark, 288,                           // calldata
-                 shl(224, shr(224, calldataload(0))), // msg.sig
-                 caller(),                              // msg.sender
-                 calldataload(4),                     // arg1
-                 calldataload(36)                     // arg2
-                )
-        }
-    }
-}
-
 interface VatLikeFlop {
     function move(address,address,uint) external;
 }
@@ -41,22 +12,11 @@ interface GemLikeFlop {
     function mint(address,uint) external;
 }
 
-/*
-   This thing creates gems on demand in return for dai.
-
- - `lot` gems for sale
- - `bid` dai paid
- - `gal` receives dai income
- - `ttl` single bid lifetime
- - `beg` minimum bid increase
- - `end` max auction duration
-*/
-
-contract Flopper is LibNoteFlop {
+contract Flopper{
     // --- Auth ---
     mapping (address => uint) public wards;
-    function rely(address usr) external note auth { wards[usr] = 1; }
-    function deny(address usr) external note auth { wards[usr] = 0; }
+    function rely(address usr) external auth { wards[usr] = 1; }
+    function deny(address usr) external auth { wards[usr] = 0; }
     modifier auth {
         require(wards[msg.sender] == 1, "Flopper/not-authorized");
         _;
@@ -109,7 +69,7 @@ contract Flopper is LibNoteFlop {
     }
 
     // --- Admin ---
-    function file(bytes32 what, uint data) external note auth {
+    function file(bytes32 what, uint data) external auth {
         if (what == "beg") beg = data;
         else if (what == "pad") pad = data;
         else if (what == "ttl") ttl = uint48(data);
@@ -130,13 +90,13 @@ contract Flopper is LibNoteFlop {
 
         emit Kick(id, lot, bid, gal);
     }
-    function tick(uint id) external note {
+    function tick(uint id) external {
         require(bids[id].end < block.timestamp, "Flopper/not-finished");
         require(bids[id].tic == 0, "Flopper/bid-already-placed");
         bids[id].lot = mul(pad, bids[id].lot) / ONE;
         bids[id].end = add(uint48(block.timestamp), tau);
     }
-    function dent(uint id, uint lot, uint bid) external note {
+    function dent(uint id, uint lot, uint bid) external {
         require(live == 1, "Flopper/not-live");
         require(bids[id].guy != address(0), "Flopper/guy-not-set");
         require(bids[id].tic > block.timestamp || bids[id].tic == 0, "Flopper/already-finished-tic");
@@ -152,17 +112,17 @@ contract Flopper is LibNoteFlop {
         bids[id].lot = lot;
         bids[id].tic = add(uint48(block.timestamp), ttl);
     }
-    function deal(uint id) external note {
+    function deal(uint id) external {
         require(live == 1, "Flopper/not-live");
         require(bids[id].tic != 0 && (bids[id].tic < block.timestamp || bids[id].end < block.timestamp), "Flopper/not-finished");
         gem.mint(bids[id].guy, bids[id].lot);
         delete bids[id];
     }
 
-    function cage() external note auth {
+    function cage() external auth {
        live = 0;
     }
-    function yank(uint id) external note {
+    function yank(uint id) external {
         require(live == 0, "Flopper/still-live");
         require(bids[id].guy != address(0), "Flopper/guy-not-set");
         vat.move(address(this), bids[id].guy, bids[id].bid);
