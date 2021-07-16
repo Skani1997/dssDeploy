@@ -5,45 +5,16 @@
 // hevm: flattened sources of /nix/store/8xb41r4qd0cjb63wcrxf1qmfg88p0961-dss-6fd7de0/src/pot.sol
 pragma solidity >=0.5.12;
 
-contract LibNotePot {
-    event LogNote(
-        bytes4   indexed  sig,
-        address  indexed  usr,
-        bytes32  indexed  arg1,
-        bytes32  indexed  arg2,
-        bytes             data
-    ) anonymous;
-
-    modifier note {
-        _;
-        assembly {
-            // log an 'anonymous' event with a constant 6 words of calldata
-            // and four indexed topics: selector, caller, arg1 and arg2
-            let mark := msize()                         // end of memory ensures zero
-            mstore(0x40, add(mark, 288))              // update free memory pointer
-            mstore(mark, 0x20)                        // bytes type data offset
-            mstore(add(mark, 0x20), 224)              // bytes size (padded)
-            calldatacopy(add(mark, 0x40), 0, 224)     // bytes payload
-            log4(mark, 288,                           // calldata
-                 shl(224, shr(224, calldataload(0))), // msg.sig
-                 caller(),                              // msg.sender
-                 calldataload(4),                     // arg1
-                 calldataload(36)                     // arg2
-                )
-        }
-    }
-}
-
 interface VatLikePot {
     function move(address,address,uint256) external;
     function suck(address,address,uint256) external;
 }
 
-contract Pot is LibNotePot {
+contract Pot{
     // --- Auth ---
     mapping (address => uint) public wards;
-    function rely(address guy) external note auth { wards[guy] = 1; }
-    function deny(address guy) external note auth { wards[guy] = 0; }
+    function rely(address guy) external auth { wards[guy] = 1; }
+    function deny(address guy) external auth { wards[guy] = 0; }
     modifier auth {
         require(wards[msg.sender] == 1, "Pot/not-authorized");
         _;
@@ -115,25 +86,25 @@ contract Pot is LibNotePot {
     }
 
     // --- Administration ---
-    function file(bytes32 what, uint256 data) external note auth {
+    function file(bytes32 what, uint256 data) external auth {
         require(live == 1, "Pot/not-live");
         require(block.timestamp == rho, "Pot/rho-not-updated");
         if (what == "dsr") dsr = data;
         else revert("Pot/file-unrecognized-param");
     }
 
-    function file(bytes32 what, address addr) external note auth {
+    function file(bytes32 what, address addr) external auth {
         if (what == "vow") vow = addr;
         else revert("Pot/file-unrecognized-param");
     }
 
-    function cage() external note auth {
+    function cage() external auth {
         live = 0;
         dsr = ONE;
     }
 
     // --- Savings Rate Accumulation ---
-    function drip() external note returns (uint tmp) {
+    function drip() external returns (uint tmp) {
         require(block.timestamp >= rho, "Pot/invalid-block.timestamp");
         tmp = rmul(rpow(dsr, block.timestamp - rho, ONE), chi);
         uint chi_ = sub(tmp, chi);
@@ -143,14 +114,14 @@ contract Pot is LibNotePot {
     }
 
     // --- Savings Dai Management ---
-    function join(uint wad) external note {
+    function join(uint wad) external {
         require(block.timestamp == rho, "Pot/rho-not-updated");
         pie[msg.sender] = add(pie[msg.sender], wad);
         Pie             = add(Pie,             wad);
         vat.move(msg.sender, address(this), mul(chi, wad));
     }
 
-    function exit(uint wad) external note {
+    function exit(uint wad) external {
         pie[msg.sender] = sub(pie[msg.sender], wad);
         Pie             = sub(Pie,             wad);
         vat.move(address(this), msg.sender, mul(chi, wad));
