@@ -5,62 +5,16 @@
 // hevm: flattened sources of /nix/store/8xb41r4qd0cjb63wcrxf1qmfg88p0961-dss-6fd7de0/src/flip.sol
 pragma solidity >=0.5.12;
 
-////// /nix/store/8xb41r4qd0cjb63wcrxf1qmfg88p0961-dss-6fd7de0/src/lib.sol
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-/* pragma solidity 0.5.12; */
-
-contract LibNoteFlip {
-    event LogNote(
-        bytes4   indexed  sig,
-        address  indexed  usr,
-        bytes32  indexed  arg1,
-        bytes32  indexed  arg2,
-        bytes             data
-    ) anonymous;
-
-    modifier note {
-        _;
-        assembly {
-            // log an 'anonymous' event with a constant 6 words of calldata
-            // and four indexed topics: selector, caller, arg1 and arg2
-            let mark := msize()                         // end of memory ensures zero
-            mstore(0x40, add(mark, 288))              // update free memory pointer
-            mstore(mark, 0x20)                        // bytes type data offset
-            mstore(add(mark, 0x20), 224)              // bytes size (padded)
-            calldatacopy(add(mark, 0x40), 0, 224)     // bytes payload
-            log4(mark, 288,                           // calldata
-                 shl(224, shr(224, calldataload(0))), // msg.sig
-                 caller(),                              // msg.sender
-                 calldataload(4),                     // arg1
-                 calldataload(36)                     // arg2
-                )
-        }
-    }
-}
-
-
 interface VatLikeFlip {
     function move(address,address,uint) external;
     function flux(bytes32,address,address,uint) external;
 }
 
-contract Flipper is LibNoteFlip {
+contract Flipper{
     // --- Auth ---
     mapping (address => uint) public wards;
-    function rely(address usr) external note auth { wards[usr] = 1; }
-    function deny(address usr) external note auth { wards[usr] = 0; }
+    function rely(address usr) external auth { wards[usr] = 1; }
+    function deny(address usr) external auth { wards[usr] = 0; }
     modifier auth {
         require(wards[msg.sender] == 1, "Flipper/not-authorized");
         _;
@@ -115,7 +69,7 @@ contract Flipper is LibNoteFlip {
     }
 
     // --- Admin ---
-    function file(bytes32 what, uint data) external note auth {
+    function file(bytes32 what, uint data) external auth {
         if (what == "beg") beg = data;
         else if (what == "ttl") ttl = uint48(data);
         else if (what == "tau") tau = uint48(data);
@@ -141,12 +95,12 @@ contract Flipper is LibNoteFlip {
 
         emit Kick(id, lot, bid, tab, usr, gal);
     }
-    function tick(uint id) external note {
+    function tick(uint id) external {
         require(bids[id].end < block.timestamp, "Flipper/not-finished");
         require(bids[id].tic == 0, "Flipper/bid-already-placed");
         bids[id].end = add(uint48(block.timestamp), tau);
     }
-    function tend(uint id, uint lot, uint bid) external note {
+    function tend(uint id, uint lot, uint bid) external {
         require(bids[id].guy != address(0), "Flipper/guy-not-set");
         require(bids[id].tic > block.timestamp || bids[id].tic == 0, "Flipper/already-finished-tic");
         require(bids[id].end > block.timestamp, "Flipper/already-finished-end");
@@ -163,7 +117,7 @@ contract Flipper is LibNoteFlip {
         bids[id].bid = bid;
         bids[id].tic = add(uint48(block.timestamp), ttl);
     }
-    function dent(uint id, uint lot, uint bid) external note {
+    function dent(uint id, uint lot, uint bid) external {
         require(bids[id].guy != address(0), "Flipper/guy-not-set");
         require(bids[id].tic > block.timestamp || bids[id].tic == 0, "Flipper/already-finished-tic");
         require(bids[id].end > block.timestamp, "Flipper/already-finished-end");
@@ -180,13 +134,13 @@ contract Flipper is LibNoteFlip {
         bids[id].lot = lot;
         bids[id].tic = add(uint48(block.timestamp), ttl);
     }
-    function deal(uint id) external note {
+    function deal(uint id) external {
         require(bids[id].tic != 0 && (bids[id].tic < block.timestamp || bids[id].end < block.timestamp), "Flipper/not-finished");
         vat.flux(ilk, address(this), bids[id].guy, bids[id].lot);
         delete bids[id];
     }
 
-    function yank(uint id) external note auth {
+    function yank(uint id) external auth {
         require(bids[id].guy != address(0), "Flipper/guy-not-set");
         require(bids[id].bid < bids[id].tab, "Flipper/already-dent-phase");
         vat.flux(ilk, address(this), msg.sender, bids[id].lot);
