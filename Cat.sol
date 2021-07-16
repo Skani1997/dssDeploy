@@ -3,37 +3,6 @@
 */
 pragma solidity >=0.5.12;
 
-
-contract LibNoteCat {
-    event LogNote(
-        bytes4   indexed  sig,
-        address  indexed  usr,
-        bytes32  indexed  arg1,
-        bytes32  indexed  arg2,
-        bytes             data
-    ) anonymous;
-
-    modifier note {
-        _;
-        assembly {
-            // log an 'anonymous' event with a constant 6 words of calldata
-            // and four indexed topics: selector, caller, arg1 and arg2
-            let mark := msize()                         // end of memory ensures zero
-            mstore(0x40, add(mark, 288))              // update free memory pointer
-            mstore(mark, 0x20)                        // bytes type data offset
-            mstore(add(mark, 0x20), 224)              // bytes size (padded)
-            calldatacopy(add(mark, 0x40), 0, 224)     // bytes payload
-            log4(mark, 288,                           // calldata
-                 shl(224, shr(224, calldataload(0))), // msg.sig
-                 caller(),                              // msg.sender
-                 calldataload(4),                     // arg1
-                 calldataload(36)                     // arg2
-                )
-        }
-    }
-}
-
-
 interface KickerCat {
     function kick(address urn, address gal, uint tab, uint lot, uint bid)
         external returns (uint);
@@ -58,11 +27,11 @@ interface VowLikeCat {
     function fess(uint) external;
 }
 
-contract Cat is LibNoteCat {
+contract Cat{
     // --- Auth ---
     mapping (address => uint) public wards;
-    function rely(address usr) external note auth { wards[usr] = 1; }
-    function deny(address usr) external note auth { wards[usr] = 0; }
+    function rely(address usr) external auth { wards[usr] = 1; }
+    function deny(address usr) external auth { wards[usr] = 0; }
     modifier auth {
         require(wards[msg.sender] == 1, "Cat/not-authorized");
         _;
@@ -113,16 +82,16 @@ contract Cat is LibNoteCat {
     }
 
     // --- Administration ---
-    function file(bytes32 what, address data) external note auth {
+    function file(bytes32 what, address data) external auth {
         if (what == "vow") vow = VowLikeCat(data);
         else revert("Cat/file-unrecognized-param");
     }
-    function file(bytes32 ilk, bytes32 what, uint data) external note auth {
+    function file(bytes32 ilk, bytes32 what, uint data) external auth {
         if (what == "chop") ilks[ilk].chop = data;
         else if (what == "lump") ilks[ilk].lump = data;
         else revert("Cat/file-unrecognized-param");
     }
-    function file(bytes32 ilk, bytes32 what, address flip) external note auth {
+    function file(bytes32 ilk, bytes32 what, address flip) external auth {
         if (what == "flip") {
             vat.nope(ilks[ilk].flip);
             ilks[ilk].flip = flip;
@@ -156,7 +125,7 @@ contract Cat is LibNoteCat {
         emit Bite(ilk, urn, lot, art, mul(art, rate), ilks[ilk].flip, id);
     }
 
-    function cage() external note auth {
+    function cage() external auth {
         live = 0;
     }
 }
