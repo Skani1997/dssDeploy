@@ -3,40 +3,6 @@
 */
 pragma solidity >=0.5.12;
 
-contract LibNoteJug {
-    event LogNote(
-        bytes4   indexed  sig,
-        address  indexed  usr,
-        bytes32  indexed  arg1,
-        bytes32  indexed  arg2,
-        bytes             data
-    ) anonymous;
-
-    modifier note {
-        _;
-        assembly {
-            // log an 'anonymous' event with a constant 6 words of calldata
-            // and four indexed topics: selector, caller, arg1 and arg2
-            let mark := msize()                         // end of memory ensures zero
-            mstore(0x40, add(mark, 288))              // update free memory pointer
-            mstore(mark, 0x20)                        // bytes type data offset
-            mstore(add(mark, 0x20), 224)              // bytes size (padded)
-            calldatacopy(add(mark, 0x40), 0, 224)     // bytes payload
-            log4(mark, 288,                           // calldata
-                 shl(224, shr(224, calldataload(0))), // msg.sig
-                 caller(),                              // msg.sender
-                 calldataload(4),                     // arg1
-                 calldataload(36)                     // arg2
-                )
-        }
-    }
-}
-
-////// /nix/store/8xb41r4qd0cjb63wcrxf1qmfg88p0961-dss-6fd7de0/src/jug.sol
-/* pragma solidity 0.5.12; */
-
-/* import "./lib.sol"; */
-
 interface VatLikeJug {
     function ilks(bytes32) external returns (
         uint256 Art,   // wad
@@ -45,11 +11,11 @@ interface VatLikeJug {
     function fold(bytes32,address,int) external;
 }
 
-contract Jug is LibNoteJug {
+contract Jug{
     // --- Auth ---
     mapping (address => uint) public wards;
-    function rely(address usr) external note auth { wards[usr] = 1; }
-    function deny(address usr) external note auth { wards[usr] = 0; }
+    function rely(address usr) external auth { wards[usr] = 1; }
+    function deny(address usr) external auth { wards[usr] = 0; }
     modifier auth {
         require(wards[msg.sender] == 1, "Jug/not-authorized");
         _;
@@ -112,28 +78,28 @@ contract Jug is LibNoteJug {
     }
 
     // --- Administration ---
-    function init(bytes32 ilk) external note auth {
+    function init(bytes32 ilk) external auth {
         Ilk storage i = ilks[ilk];
         require(i.duty == 0, "Jug/ilk-already-init");
         i.duty = ONE;
         i.rho  = block.timestamp;
     }
-    function file(bytes32 ilk, bytes32 what, uint data) external note auth {
+    function file(bytes32 ilk, bytes32 what, uint data) external auth {
         require(block.timestamp == ilks[ilk].rho, "Jug/rho-not-updated");
         if (what == "duty") ilks[ilk].duty = data;
         else revert("Jug/file-unrecognized-param");
     }
-    function file(bytes32 what, uint data) external note auth {
+    function file(bytes32 what, uint data) external auth {
         if (what == "base") base = data;
         else revert("Jug/file-unrecognized-param");
     }
-    function file(bytes32 what, address data) external note auth {
+    function file(bytes32 what, address data) external auth {
         if (what == "vow") vow = data;
         else revert("Jug/file-unrecognized-param");
     }
 
     // --- Stability Fee Collection ---
-    function drip(bytes32 ilk) external note returns (uint rate) {
+    function drip(bytes32 ilk) external returns (uint rate) {
         require(block.timestamp >= ilks[ilk].rho, "Jug/invalid-block.timestamp");
         (, uint prev) = vat.ilks(ilk);
         rate = rmul(rpow(add(base, ilks[ilk].duty), block.timestamp - ilks[ilk].rho, ONE), prev);
