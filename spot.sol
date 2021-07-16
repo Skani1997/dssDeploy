@@ -16,8 +16,8 @@ interface PipLikeSpot {
 contract Spotter{
     // --- Auth ---
     mapping (address => uint) public wards;
-    function rely(address guy) external note auth { wards[guy] = 1;  }
-    function deny(address guy) external note auth { wards[guy] = 0; }
+    function rely(address guy) external auth { wards[guy] = 1;  }
+    function deny(address guy) external auth { wards[guy] = 0; }
     modifier auth {
         require(wards[msg.sender] == 1, "Spotter/not-authorized");
         _;
@@ -62,17 +62,17 @@ contract Spotter{
     }
 
     // --- Administration ---
-    function file(bytes32 ilk, bytes32 what, address pip_) external note auth {
+    function file(bytes32 ilk, bytes32 what, address pip_) external auth {
         require(live == 1, "Spotter/not-live");
         if (what == "pip") ilks[ilk].pip = PipLikeSpot(pip_);
         else revert("Spotter/file-unrecognized-param");
     }
-    function file(bytes32 what, uint data) external note auth {
+    function file(bytes32 what, uint data) external auth {
         require(live == 1, "Spotter/not-live");
         if (what == "par") par = data;
         else revert("Spotter/file-unrecognized-param");
     }
-    function file(bytes32 ilk, bytes32 what, uint data) external note auth {
+    function file(bytes32 ilk, bytes32 what, uint data) external auth {
         require(live == 1, "Spotter/not-live");
         if (what == "mat") ilks[ilk].mat = data;
         else revert("Spotter/file-unrecognized-param");
@@ -86,7 +86,7 @@ contract Spotter{
         emit Poke(ilk, val, spot);
     }
 
-    function cage() external note auth {
+    function cage() external auth {
         live = 0;
     }
 }
