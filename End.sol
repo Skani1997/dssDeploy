@@ -96,6 +96,18 @@ interface Spotty {
     function cage() external;
 }
 
+interface ClipLikeEnd {
+    function sales(uint256 id) external view returns (
+        uint256 pos,
+        uint256 tab,
+        uint256 lot,
+        address usr,
+        uint96  tic,
+        uint256 top
+    );
+    function yank(uint256 id) external;
+}
+
 contract End is LibNoteEnd {
     // --- Auth ---
     mapping (address => uint) public wards;
@@ -221,7 +233,7 @@ contract End is LibNoteEnd {
         require(tag[ilk] != 0, "End/tag-ilk-not-defined");
 
         (address _clip,,,) = dog.ilks(ilk);
-        ClipLike clip = ClipLike(_clip);
+        ClipLikeEnd clip = ClipLike(_clip);
         (, uint256 rate,,,) = vat.ilks(ilk);
         (, uint256 tab, uint256 lot, address usr,,) = clip.sales(id);
 
