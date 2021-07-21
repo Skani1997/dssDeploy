@@ -7,6 +7,7 @@ pragma solidity >=0.5.12;
 
 interface VatLikeFlop {
     function move(address,address,uint) external;
+    function suck(address,address,uint) external;
 }
 interface GemLikeFlop {
     function mint(address,uint) external;
