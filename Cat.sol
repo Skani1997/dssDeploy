@@ -13,6 +13,8 @@ interface VatLikeCat {
         uint256 Art,   // wad
         uint256 rate,  // ray
         uint256 spot   // ray
+        uint256 line, // [rad]
+        uint256 dust  // [rad]
     );
     function urns(bytes32,address) external view returns (
         uint256 ink,   // wad
@@ -41,14 +43,15 @@ contract Cat{
     struct Ilk {
         address flip;  // Liquidator
         uint256 chop;  // Liquidation Penalty   [ray]
-        uint256 lump;  // Liquidation Quantity  [wad]
+        uint256 dunk;  // Liquidation Quantity  [wad]
     }
 
     mapping (bytes32 => Ilk) public ilks;
-
-    uint256 public live;
-    VatLikeCat public vat;
-    VowLikeCat public vow;
+    uint256 public live;   // Active Flag
+    VatLike public vat;    // CDP Engine
+    VowLike public vow;    // Debt Engine
+    uint256 public box;    // Max Dai out for liquidation        [rad]
+    uint256 public litter; // Balance of Dai out for liquidation [rad]
 
     // --- Events ---
     event Bite(
@@ -86,9 +89,13 @@ contract Cat{
         if (what == "vow") vow = VowLikeCat(data);
         else revert("Cat/file-unrecognized-param");
     }
+    function file(bytes32 what, uint256 data) external auth {
+        if (what == "box") box = data;
+        else revert("Cat/file-unrecognized-param");
+    }
     function file(bytes32 ilk, bytes32 what, uint data) external auth {
         if (what == "chop") ilks[ilk].chop = data;
-        else if (what == "lump") ilks[ilk].lump = data;
+        else if (what == "dunk") ilks[ilk].dunk = data;
         else revert("Cat/file-unrecognized-param");
     }
     function file(bytes32 ilk, bytes32 what, address flip) external auth {
@@ -101,28 +108,55 @@ contract Cat{
     }
 
     // --- CDP Liquidation ---
-    function bite(bytes32 ilk, address urn) external returns (uint id) {
-        (, uint rate, uint spot) = vat.ilks(ilk);
-        (uint ink, uint art) = vat.urns(ilk, urn);
+    function bite(bytes32 ilk, address urn) external returns (uint256 id) {
+        (,uint256 rate,uint256 spot,,uint256 dust) = vat.ilks(ilk);
+        (uint256 ink, uint256 art) = vat.urns(ilk, urn);
 
         require(live == 1, "Cat/not-live");
         require(spot > 0 && mul(ink, spot) < mul(art, rate), "Cat/not-unsafe");
 
-        uint lot = min(ink, ilks[ilk].lump);
-        art      = min(art, mul(lot, art) / ink);
+        Ilk memory milk = ilks[ilk];
+        uint256 dart;
+        {
+            uint256 room = sub(box, litter);
 
-        require(lot <= 2**255 && art <= 2**255, "Cat/overflow");
-        vat.grab(ilk, urn, address(this), address(vow), -int(lot), -int(art));
+            // test whether the remaining space in the litterbox is dusty
+            require(litter < box && room >= dust, "Cat/liquidation-limit-hit");
 
-        vow.fess(mul(art, rate));
-        id = KickerCat(ilks[ilk].flip).kick({ urn: urn
-                                         , gal: address(vow)
-                                         , tab: rmul(mul(art, rate), ilks[ilk].chop)
-                                         , lot: lot
-                                         , bid: 0
-                                         });
+            dart = min(art, mul(min(milk.dunk, room), WAD) / rate / milk.chop);
+        }
 
-        emit Bite(ilk, urn, lot, art, mul(art, rate), ilks[ilk].flip, id);
+        uint256 dink = min(ink, mul(ink, dart) / art);
+
+        require(dart >  0      && dink >  0     , "Cat/null-auction");
+        require(dart <= 2**255 && dink <= 2**255, "Cat/overflow"    );
+
+        // This may leave the CDP in a dusty state
+        vat.grab(
+            ilk, urn, address(this), address(vow), -int256(dink), -int256(dart)
+        );
+        vow.fess(mul(dart, rate));
+
+        { // Avoid stack too deep
+            // This calcuation will overflow if dart*rate exceeds ~10^14,
+            // i.e. the maximum dunk is roughly 100 trillion DAI.
+            uint256 tab = mul(mul(dart, rate), milk.chop) / WAD;
+            litter = add(litter, tab);
+
+            id = Kicker(milk.flip).kick({
+                urn: urn,
+                gal: address(vow),
+                tab: tab,
+                lot: dink,
+                bid: 0
+            });
+        }
+
+        emit Bite(ilk, urn, dink, dart, mul(dart, rate), milk.flip, id);
+    }
+
+    function claw(uint256 rad) external auth {
+        litter = sub(litter, rad);
     }
 
     function cage() external auth {
