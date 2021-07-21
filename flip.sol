@@ -10,6 +10,10 @@ interface VatLikeFlip {
     function flux(bytes32,address,address,uint) external;
 }
 
+interface CatLikeFlip {
+    function claw(uint256) external;
+}
+
 contract Flipper{
     // --- Auth ---
     mapping (address => uint) public wards;
@@ -42,6 +46,7 @@ contract Flipper{
     uint48  public   ttl = 3 hours;  // 3 hours bid duration
     uint48  public   tau = 2 days;   // 2 days total auction length
     uint256 public kicks = 0;
+    CatLikeFlip public   cat;            // cat liquidation module
 
     // --- Events ---
     event Kick(
@@ -56,6 +61,7 @@ contract Flipper{
     // --- Init ---
     constructor(address vat_, bytes32 ilk_) public {
         vat = VatLikeFlip(vat_);
+        cat = CatLikeFlip(cat_);
         ilk = ilk_;
         wards[msg.sender] = 1;
     }
@@ -75,7 +81,11 @@ contract Flipper{
         else if (what == "tau") tau = uint48(data);
         else revert("Flipper/file-unrecognized-param");
     }
-
+    function file(bytes32 what, address data) external auth {
+        if (what == "cat") cat = CatLike(data);
+        else revert("Flipper/file-unrecognized-param");
+    }
+    
     // --- Auction ---
     function kick(address usr, address gal, uint tab, uint lot, uint bid)
         public auth returns (uint id)
@@ -110,12 +120,14 @@ contract Flipper{
         require(bid >  bids[id].bid, "Flipper/bid-not-higher");
         require(mul(bid, ONE) >= mul(beg, bids[id].bid) || bid == bids[id].tab, "Flipper/insufficient-increase");
 
-        vat.move(msg.sender, bids[id].guy, bids[id].bid);
+        if (msg.sender != bids[id].guy) {
+            vat.move(msg.sender, bids[id].guy, bids[id].bid);
+            bids[id].guy = msg.sender;
+        }
         vat.move(msg.sender, bids[id].gal, bid - bids[id].bid);
 
-        bids[id].guy = msg.sender;
         bids[id].bid = bid;
-        bids[id].tic = add(uint48(block.timestamp), ttl);
+        bids[id].tic = add(uint48(now), ttl);
     }
     function dent(uint id, uint lot, uint bid) external {
         require(bids[id].guy != address(0), "Flipper/guy-not-set");
@@ -127,15 +139,18 @@ contract Flipper{
         require(lot < bids[id].lot, "Flipper/lot-not-lower");
         require(mul(beg, lot) <= mul(bids[id].lot, ONE), "Flipper/insufficient-decrease");
 
-        vat.move(msg.sender, bids[id].guy, bid);
+        if (msg.sender != bids[id].guy) {
+            vat.move(msg.sender, bids[id].guy, bid);
+            bids[id].guy = msg.sender;
+        }
         vat.flux(ilk, address(this), bids[id].usr, bids[id].lot - lot);
 
-        bids[id].guy = msg.sender;
         bids[id].lot = lot;
-        bids[id].tic = add(uint48(block.timestamp), ttl);
+        bids[id].tic = add(uint48(now), ttl);
     }
     function deal(uint id) external {
         require(bids[id].tic != 0 && (bids[id].tic < block.timestamp || bids[id].end < block.timestamp), "Flipper/not-finished");
+        cat.claw(bids[id].tab);
         vat.flux(ilk, address(this), bids[id].guy, bids[id].lot);
         delete bids[id];
     }
@@ -143,6 +158,7 @@ contract Flipper{
     function yank(uint id) external auth {
         require(bids[id].guy != address(0), "Flipper/guy-not-set");
         require(bids[id].bid < bids[id].tab, "Flipper/already-dent-phase");
+        cat.claw(bids[id].tab);
         vat.flux(ilk, address(this), msg.sender, bids[id].lot);
         vat.move(msg.sender, bids[id].guy, bids[id].bid);
         delete bids[id];
