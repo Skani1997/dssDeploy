@@ -96,6 +96,16 @@ interface Spotty {
     function cage() external;
 }
 
+interface DogLikeEnd {
+    function ilks(bytes32) external returns (
+        address clip,
+        uint256 chop,
+        uint256 hole,
+        uint256 dirt
+    );
+    function cage() external;
+}
+
 interface ClipLikeEnd {
     function sales(uint256 id) external view returns (
         uint256 pos,
@@ -123,6 +133,7 @@ contract End is LibNoteEnd {
     CatLikeEnd  public cat;
     VowLikeEnd  public vow;
     PotLikeEnd  public pot;
+    DogLikeEnd public dog;
     Spotty   public spot;
 
     uint256  public live;  // cage flag
@@ -160,9 +171,12 @@ contract End is LibNoteEnd {
     constructor() public {
         wards[msg.sender] = 1;
         live = 1;
+        emit Rely(msg.sender);
     }
 
     // --- Math ---
+    uint256 constant WAD = 10 ** 18;
+    uint256 constant RAY = 10 ** 27;
     function add(uint x, uint y) internal pure returns (uint z) {
         z = x + y;
         require(z >= x);
@@ -194,6 +208,7 @@ contract End is LibNoteEnd {
         if (what == "vat")  vat = VatLikeEnd(data);
         else if (what == "cat")  cat = CatLikeEnd(data);
         else if (what == "vow")  vow = VowLikeEnd(data);
+        else if (what == "dog")   dog = DogLikeEnd(data);
         else if (what == "pot")  pot = PotLikeEnd(data);
         else if (what == "spot") spot = Spotty(data);
         else revert("End/file-unrecognized-param");
@@ -214,6 +229,7 @@ contract End is LibNoteEnd {
         vat.cage();
         cat.cage();
         vow.cage();
+        dog.cage();
         spot.cage();
         pot.cage();
         emit Cage();
