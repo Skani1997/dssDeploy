@@ -12,6 +12,11 @@ interface GemLikeFlop {
     function mint(address,uint) external;
 }
 
+interface VowLikeFlop {
+    function Ash() external returns (uint);
+    function kiss(uint) external;
+}
+
 contract Flopper{
     // --- Auth ---
     mapping (address => uint) public wards;
@@ -43,7 +48,8 @@ contract Flopper{
     uint48   public   tau = 2 days;   // 2 days total auction length
     uint256  public kicks = 0;
     uint256  public live;
-
+    address  public vow;              // not used until shutdown
+    
     // --- Events ---
     event Kick(
       uint256 id,
@@ -66,6 +72,9 @@ contract Flopper{
     }
     function mul(uint x, uint y) internal pure returns (uint z) {
         require(y == 0 || (z = x * y) / y == x);
+    }
+    function min(uint x, uint y) internal pure returns (uint z) {
+        if (x > y) { z = y; } else { z = x; }
     }
 
     // --- Admin ---
@@ -106,11 +115,20 @@ contract Flopper{
         require(lot <  bids[id].lot, "Flopper/lot-not-lower");
         require(mul(beg, lot) <= mul(bids[id].lot, ONE), "Flopper/insufficient-decrease");
 
-        vat.move(msg.sender, bids[id].guy, bid);
+        if (msg.sender != bids[id].guy) {
+            vat.move(msg.sender, bids[id].guy, bid);
 
-        bids[id].guy = msg.sender;
+            // on first dent, clear as much Ash as possible
+            if (bids[id].tic == 0) {
+                uint Ash = VowLike(bids[id].guy).Ash();
+                VowLike(bids[id].guy).kiss(min(bid, Ash));
+            }
+
+            bids[id].guy = msg.sender;
+        }
+
         bids[id].lot = lot;
-        bids[id].tic = add(uint48(block.timestamp), ttl);
+        bids[id].tic = add(uint48(now), ttl);
     }
     function deal(uint id) external {
         require(live == 1, "Flopper/not-live");
@@ -119,13 +137,15 @@ contract Flopper{
         delete bids[id];
     }
 
+    // shutdown
     function cage() external auth {
        live = 0;
+       vow = msg.sender;
     }
     function yank(uint id) external {
         require(live == 0, "Flopper/still-live");
         require(bids[id].guy != address(0), "Flopper/guy-not-set");
-        vat.move(address(this), bids[id].guy, bids[id].bid);
+        vat.suck(vow, bids[id].guy, bids[id].bid);
         delete bids[id];
     }
 }
