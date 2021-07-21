@@ -59,7 +59,7 @@ contract Flipper{
     );
 
     // --- Init ---
-    constructor(address vat_, bytes32 ilk_) public {
+    constructor(address vat_,  address cat_,bytes32 ilk_) public {
         vat = VatLikeFlip(vat_);
         cat = CatLikeFlip(cat_);
         ilk = ilk_;
@@ -82,7 +82,7 @@ contract Flipper{
         else revert("Flipper/file-unrecognized-param");
     }
     function file(bytes32 what, address data) external auth {
-        if (what == "cat") cat = CatLike(data);
+        if (what == "cat") cat = CatLikeFlip(data);
         else revert("Flipper/file-unrecognized-param");
     }
     
