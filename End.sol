@@ -126,6 +126,24 @@ contract End is LibNoteEnd {
     mapping (address => uint256)                      public bag;  // [wad]
     mapping (bytes32 => mapping (address => uint256)) public out;  // [wad]
 
+    // --- Events ---
+    event Rely(address indexed usr);
+    event Deny(address indexed usr);
+
+    event File(bytes32 indexed what, uint256 data);
+    event File(bytes32 indexed what, address data);
+
+    event Cage();
+    event Cage(bytes32 indexed ilk);
+    event Snip(bytes32 indexed ilk, uint256 indexed id, address indexed usr, uint256 tab, uint256 lot, uint256 art);
+    event Skip(bytes32 indexed ilk, uint256 indexed id, address indexed usr, uint256 tab, uint256 lot, uint256 art);
+    event Skim(bytes32 indexed ilk, address indexed urn, uint256 wad, uint256 art);
+    event Free(bytes32 indexed ilk, address indexed usr, uint256 ink);
+    event Thaw();
+    event Flow(bytes32 indexed ilk);
+    event Pack(address indexed usr, uint256 wad);
+    event Cash(bytes32 indexed ilk, address indexed usr, uint256 wad);
+
     // --- Init ---
     constructor() public {
         wards[msg.sender] = 1;
@@ -167,11 +185,13 @@ contract End is LibNoteEnd {
         else if (what == "pot")  pot = PotLikeEnd(data);
         else if (what == "spot") spot = Spotty(data);
         else revert("End/file-unrecognized-param");
+        emit File(what, data);
     }
     function file(bytes32 what, uint256 data) external note auth {
         require(live == 1, "End/not-live");
         if (what == "wait") wait = data;
         else revert("End/file-unrecognized-param");
+        emit File(what, data);
     }
 
     // --- Settlement ---
@@ -184,6 +204,7 @@ contract End is LibNoteEnd {
         vow.cage();
         spot.cage();
         pot.cage();
+        emit Cage();
     }
 
     function cage(bytes32 ilk) external note {
@@ -193,6 +214,25 @@ contract End is LibNoteEnd {
         (PipLikeEnd pip,) = spot.ilks(ilk);
         // par is a ray, pip returns a wad
         tag[ilk] = wdiv(spot.par(), uint(pip.read()));
+        emit Cage(ilk);
+    }
+
+    function snip(bytes32 ilk, uint256 id) external {
+        require(tag[ilk] != 0, "End/tag-ilk-not-defined");
+
+        (address _clip,,,) = dog.ilks(ilk);
+        ClipLike clip = ClipLike(_clip);
+        (, uint256 rate,,,) = vat.ilks(ilk);
+        (, uint256 tab, uint256 lot, address usr,,) = clip.sales(id);
+
+        vat.suck(address(vow), address(vow),  tab);
+        clip.yank(id);
+
+        uint256 art = tab / rate;
+        Art[ilk] = add(Art[ilk], art);
+        require(int256(lot) >= 0 && int256(art) >= 0, "End/overflow");
+        vat.grab(ilk, usr, address(this), address(vow), int256(lot), int256(art));
+        emit Snip(ilk, id, usr, tab, lot, art);
     }
 
     function skip(bytes32 ilk, uint256 id) external note {
@@ -212,6 +252,7 @@ contract End is LibNoteEnd {
         Art[ilk] = add(Art[ilk], art);
         require(int(lot) >= 0 && int(art) >= 0, "End/overflow");
         vat.grab(ilk, usr, address(this), address(vow), int(lot), int(art));
+        emit Skip(ilk, id, usr, tab, lot, art);
     }
 
     function skim(bytes32 ilk, address urn) external note {
@@ -225,6 +266,7 @@ contract End is LibNoteEnd {
 
         require(wad <= 2**255 && art <= 2**255, "End/overflow");
         vat.grab(ilk, urn, address(this), address(vow), -int(wad), -int(art));
+        emit Skim(ilk, urn, wad, art);
     }
 
     function free(bytes32 ilk) external note {
@@ -233,6 +275,7 @@ contract End is LibNoteEnd {
         require(art == 0, "End/art-not-zero");
         require(ink <= 2**255, "End/overflow");
         vat.grab(ilk, msg.sender, msg.sender, address(vow), -int(ink), 0);
+        emit Free(ilk, msg.sender, ink);
     }
 
     function thaw() external note {
@@ -241,6 +284,7 @@ contract End is LibNoteEnd {
         require(vat.dai(address(vow)) == 0, "End/surplus-not-zero");
         require(block.timestamp >= add(when, wait), "End/wait-not-finished");
         debt = vat.debt();
+        emit Thaw();
     }
     function flow(bytes32 ilk) external note {
         require(debt != 0, "End/debt-zero");
@@ -249,17 +293,20 @@ contract End is LibNoteEnd {
         (, uint rate,,,) = vat.ilks(ilk);
         uint256 wad = rmul(rmul(Art[ilk], rate), tag[ilk]);
         fix[ilk] = rdiv(mul(sub(wad, gap[ilk]), RAY), debt);
+        emit Flow(ilk);
     }
 
     function pack(uint256 wad) external note {
         require(debt != 0, "End/debt-zero");
         vat.move(msg.sender, address(vow), mul(wad, RAY));
         bag[msg.sender] = add(bag[msg.sender], wad);
+        emit Pack(msg.sender, wad);
     }
     function cash(bytes32 ilk, uint wad) external note {
         require(fix[ilk] != 0, "End/fix-ilk-not-defined");
         vat.flux(ilk, address(this), msg.sender, rmul(wad, fix[ilk]));
         out[ilk][msg.sender] = add(out[ilk][msg.sender], wad);
         require(out[ilk][msg.sender] <= bag[msg.sender], "End/insufficient-bag-balance");
+        emit Cash(ilk, msg.sender, wad);
     }
 }
