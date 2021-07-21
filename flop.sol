@@ -120,8 +120,8 @@ contract Flopper{
 
             // on first dent, clear as much Ash as possible
             if (bids[id].tic == 0) {
-                uint Ash = VowLike(bids[id].guy).Ash();
-                VowLike(bids[id].guy).kiss(min(bid, Ash));
+                uint Ash = VowLikeFlop(bids[id].guy).Ash();
+                VowLikeFlop(bids[id].guy).kiss(min(bid, Ash));
             }
 
             bids[id].guy = msg.sender;
