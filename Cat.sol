@@ -69,8 +69,8 @@ contract Cat {
     mapping (bytes32 => Ilk) public ilks;
 
     uint256 public live;   // Active Flag
-    VatLike public vat;    // CDP Engine
-    VowLike public vow;    // Debt Engine
+    VatLikeCat public vat;    // CDP Engine
+    VowLikeCat public vow;    // Debt Engine
     uint256 public box;    // Max Dai out for liquidation        [rad]
     uint256 public litter; // Balance of Dai out for liquidation [rad]
 
