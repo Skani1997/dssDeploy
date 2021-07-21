@@ -28,7 +28,7 @@ interface Kicker {
         external returns (uint256);
 }
 
-interface VatLike {
+interface VatLikeCat {
     function ilks(bytes32) external view returns (
         uint256 Art,  // [wad]
         uint256 rate, // [ray]
@@ -45,7 +45,7 @@ interface VatLike {
     function nope(address) external;
 }
 
-interface VowLike {
+interface VowLikeCat {
     function fess(uint256) external;
 }
 
@@ -88,7 +88,7 @@ contract Cat {
     // --- Init ---
     constructor(address vat_) public {
         wards[msg.sender] = 1;
-        vat = VatLike(vat_);
+        vat = VatLikeCat(vat_);
         live = 1;
     }
 
