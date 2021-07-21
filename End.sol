@@ -233,7 +233,7 @@ contract End is LibNoteEnd {
         require(tag[ilk] != 0, "End/tag-ilk-not-defined");
 
         (address _clip,,,) = dog.ilks(ilk);
-        ClipLikeEnd clip = ClipLike(_clip);
+        ClipLikeEnd clip = ClipLikeEnd(_clip);
         (, uint256 rate,,,) = vat.ilks(ilk);
         (, uint256 tab, uint256 lot, address usr,,) = clip.sales(id);
 
