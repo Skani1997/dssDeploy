@@ -110,7 +110,7 @@ contract Cat {
 
     // --- Administration ---
     function file(bytes32 what, address data) external auth {
-        if (what == "vow") vow = VowLike(data);
+        if (what == "vow") vow = VowLikeCat(data);
         else revert("Cat/file-unrecognized-param");
     }
     function file(bytes32 what, uint256 data) external auth {
