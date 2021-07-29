@@ -21,7 +21,7 @@
 
 pragma solidity >=0.5.12;
 
-contract LibNote {
+contract LibNoteFlop {
     event LogNote(
         bytes4   indexed  sig,
         address  indexed  usr,
@@ -50,14 +50,14 @@ contract LibNote {
     }
 }
 
-interface VatLike {
+interface VatLikeFlop {
     function move(address,address,uint) external;
     function suck(address,address,uint) external;
 }
-interface GemLike {
+interface GemLikeFlop {
     function mint(address,uint) external;
 }
-interface VowLike {
+interface VowLikeFlop {
     function Ash() external returns (uint);
     function kiss(uint) external;
 }
@@ -73,7 +73,7 @@ interface VowLike {
  - `end` max auction duration
 */
 
-contract Flopper is LibNote {
+contract Flopper is LibNoteFlop {
     // --- Auth ---
     mapping (address => uint) public wards;
     function rely(address usr) external note auth { wards[usr] = 1; }
@@ -94,8 +94,8 @@ contract Flopper is LibNote {
 
     mapping (uint => Bid) public bids;
 
-    VatLike  public   vat;  // CDP Engine
-    GemLike  public   gem;
+    VatLikeFlop  public   vat;  // CDP Engine
+    GemLikeFlop  public   gem;
 
     uint256  constant ONE = 1.00E18;
     uint256  public   beg = 1.05E18;  // 5% minimum bid increase
@@ -117,8 +117,8 @@ contract Flopper is LibNote {
     // --- Init ---
     constructor(address vat_, address gem_) public {
         wards[msg.sender] = 1;
-        vat = VatLike(vat_);
-        gem = GemLike(gem_);
+        vat = VatLikeFlop(vat_);
+        gem = GemLikeFlop(gem_);
         live = 1;
     }
 
@@ -176,8 +176,8 @@ contract Flopper is LibNote {
 
             // on first dent, clear as much Ash as possible
             if (bids[id].tic == 0) {
-                uint Ash = VowLike(bids[id].guy).Ash();
-                VowLike(bids[id].guy).kiss(min(bid, Ash));
+                uint Ash = VowLikeFlop(bids[id].guy).Ash();
+                VowLikeFlop(bids[id].guy).kiss(min(bid, Ash));
             }
 
             bids[id].guy = msg.sender;
