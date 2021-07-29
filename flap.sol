@@ -21,7 +21,7 @@
 
 pragma solidity >=0.5.12;
 
-contract LibNote {
+contract LibNoteFlap {
     event LogNote(
         bytes4   indexed  sig,
         address  indexed  usr,
@@ -68,7 +68,7 @@ interface GemLike {
  - `end` max auction duration
 */
 
-contract Flapper is LibNote {
+contract Flapper is LibNoteFlap {
     // --- Auth ---
     mapping (address => uint) public wards;
     function rely(address usr) external note auth { wards[usr] = 1; }
