@@ -2,19 +2,19 @@
 
 pragma solidity >=0.5.12;
 
-abstract contract FlopLikeVow {
+interface FlopLikeVow {
     function kick(address gal, uint lot, uint bid) virtual external returns (uint);
     function cage() virtual external;
     function live() virtual external returns (uint);
 }
 
-abstract contract FlapLikeVow {
+interface FlapLikeVow {
     function kick(uint lot, uint bid) virtual external returns (uint);
     function cage(uint) virtual external;
     function live() virtual external returns (uint);
 }
 
-abstract contract VatLikeVow {
+interface VatLikeVow {
     function dai (address) virtual external view returns (uint);
     function sin (address ) virtual external view returns (uint);
     function heal(uint256) virtual external;
