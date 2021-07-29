@@ -5,16 +5,102 @@
 // hevm: flattened sources of /nix/store/8xb41r4qd0cjb63wcrxf1qmfg88p0961-dss-6fd7de0/src/pot.sol
 pragma solidity >=0.5.12;
 
+////// /nix/store/8xb41r4qd0cjb63wcrxf1qmfg88p0961-dss-6fd7de0/src/lib.sol
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+/* pragma solidity 0.5.12; */
+
+contract LibNotePot {
+    event LogNote(
+        bytes4   indexed  sig,
+        address  indexed  usr,
+        bytes32  indexed  arg1,
+        bytes32  indexed  arg2,
+        bytes             data
+    ) anonymous;
+
+    modifier note {
+        _;
+        assembly {
+            // log an 'anonymous' event with a constant 6 words of calldata
+            // and four indexed topics: selector, caller, arg1 and arg2
+            let mark := msize()                         // end of memory ensures zero
+            mstore(0x40, add(mark, 288))              // update free memory pointer
+            mstore(mark, 0x20)                        // bytes type data offset
+            mstore(add(mark, 0x20), 224)              // bytes size (padded)
+            calldatacopy(add(mark, 0x40), 0, 224)     // bytes payload
+            log4(mark, 288,                           // calldata
+                 shl(224, shr(224, calldataload(0))), // msg.sig
+                 caller(),                              // msg.sender
+                 calldataload(4),                     // arg1
+                 calldataload(36)                     // arg2
+                )
+        }
+    }
+}
+
+////// /nix/store/8xb41r4qd0cjb63wcrxf1qmfg88p0961-dss-6fd7de0/src/pot.sol
+/// pot.sol -- Dai Savings Rate
+
+// Copyright (C) 2018 Rain <rainbreak@riseup.net>
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+/* pragma solidity 0.5.12; */
+
+/* import "./lib.sol"; */
+
+/*
+   "Savings Dai" is obtained when Dai is deposited into
+   this contract. Each "Savings Dai" accrues Dai interest
+   at the "Dai Savings Rate".
+
+   This contract does not implement a user tradeable token
+   and is intended to be used with adapters.
+
+         --- `save` your `dai` in the `pot` ---
+
+   - `dsr`: the Dai Savings Rate
+   - `pie`: user balance of Savings Dai
+
+   - `join`: start saving some dai
+   - `exit`: remove some dai
+   - `drip`: perform rate collection
+
+*/
+
 interface VatLikePot {
     function move(address,address,uint256) external;
     function suck(address,address,uint256) external;
 }
 
-contract Pot{
+contract Pot is LibNotePot {
     // --- Auth ---
     mapping (address => uint) public wards;
-    function rely(address guy) external auth { wards[guy] = 1; }
-    function deny(address guy) external auth { wards[guy] = 0; }
+    function rely(address guy) external note auth { wards[guy] = 1; }
+    function deny(address guy) external note auth { wards[guy] = 0; }
     modifier auth {
         require(wards[msg.sender] == 1, "Pot/not-authorized");
         _;
@@ -86,25 +172,25 @@ contract Pot{
     }
 
     // --- Administration ---
-    function file(bytes32 what, uint256 data) external auth {
+    function file(bytes32 what, uint256 data) external note auth {
         require(live == 1, "Pot/not-live");
         require(block.timestamp == rho, "Pot/rho-not-updated");
         if (what == "dsr") dsr = data;
         else revert("Pot/file-unrecognized-param");
     }
 
-    function file(bytes32 what, address addr) external auth {
+    function file(bytes32 what, address addr) external note auth {
         if (what == "vow") vow = addr;
         else revert("Pot/file-unrecognized-param");
     }
 
-    function cage() external auth {
+    function cage() external note auth {
         live = 0;
         dsr = ONE;
     }
 
     // --- Savings Rate Accumulation ---
-    function drip() external returns (uint tmp) {
+    function drip() external note returns (uint tmp) {
         require(block.timestamp >= rho, "Pot/invalid-block.timestamp");
         tmp = rmul(rpow(dsr, block.timestamp - rho, ONE), chi);
         uint chi_ = sub(tmp, chi);
@@ -114,14 +200,14 @@ contract Pot{
     }
 
     // --- Savings Dai Management ---
-    function join(uint wad) external {
+    function join(uint wad) external note {
         require(block.timestamp == rho, "Pot/rho-not-updated");
         pie[msg.sender] = add(pie[msg.sender], wad);
         Pie             = add(Pie,             wad);
         vat.move(msg.sender, address(this), mul(chi, wad));
     }
 
-    function exit(uint wad) external {
+    function exit(uint wad) external note {
         pie[msg.sender] = sub(pie[msg.sender], wad);
         Pie             = sub(Pie,             wad);
         vat.move(address(this), msg.sender, mul(chi, wad));
