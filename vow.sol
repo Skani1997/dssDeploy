@@ -3,23 +3,23 @@
 pragma solidity >=0.5.12;
 
 interface FlopLikeVow {
-    function kick(address gal, uint lot, uint bid) virtual external returns (uint);
-    function cage() virtual external;
-    function live() virtual external returns (uint);
+    function kick(address gal, uint lot, uint bid) external returns (uint);
+    function cage() external;
+    function live() external returns (uint);
 }
 
 interface FlapLikeVow {
-    function kick(uint lot, uint bid) virtual external returns (uint);
-    function cage(uint) virtual external;
-    function live() virtual external returns (uint);
+    function kick(uint lot, uint bid) external returns (uint);
+    function cage(uint) external;
+    function live() external returns (uint);
 }
 
 interface VatLikeVow {
-    function dai (address) virtual external view returns (uint);
-    function sin (address ) virtual external view returns (uint);
-    function heal(uint256) virtual external;
-    function hope(address) virtual external;
-    function nope(address) virtual external;
+    function dai (address) external view returns (uint);
+    function sin (address ) external view returns (uint);
+    function heal(uint256) external;
+    function hope(address) external;
+    function nope(address) external;
 }
 
 contract Vow{
